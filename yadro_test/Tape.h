@@ -10,6 +10,12 @@ enum class Direction : short
 	backward = 1
 };
 
+enum class Destination : short
+{
+	begin = -1,
+	end = 1
+};
+
 struct Delay
 {
 	unsigned move;
@@ -20,14 +26,22 @@ struct Delay
 class Tape
 {
 public :
+			Tape();
+			Tape(Delay delays);
+			~Tape();
 	void	move(Direction direction);
-	void	roll(Direction direction, long int lenght);
-	__int32 read();
+	void	roll(Destination destination);
+	void	pushBack(__int32 element);
+	void	pushFront(__int32 element);
+	__int32 read() const;
 	void	write(__int32 data);
+	void	sort();
+	bool	isAtEnd() const;
 
 private :
-	Delay			   delay_;
-	std::list<__int32> data_;
+	Delay						 delay_;
+	std::list<__int32>			 data_;
+	std::list<__int32>::iterator head_;
 };
 
 #endif // !TAPE

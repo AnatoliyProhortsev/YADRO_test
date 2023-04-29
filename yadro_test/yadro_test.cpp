@@ -14,19 +14,27 @@ int main()
 {
     setlocale(0, "");
 
-    std::string configFileName;
-    std::cout << "Введите название файла-конфигурации:\n> ";
-    std::cin >> configFileName;
-
-    std::ifstream configFile(configFileName);
+    Delay configDelay = { 0,0,0 };
+    std::ifstream configFile("cfg.txt");
     if (configFile.is_open())
     {
-        
-    }
-    else
-    {
+        configFile >> configDelay.move
+            >> configDelay.readWrite
+            >> configDelay.roll;
 
+        configFile.close();
     }
+
+    std::string inputFileName;
+    std::cout << "Введите название входного файла:\n> ";
+    std::cin >> inputFileName;
+
+    std::string outputFileName;
+    std::cout << "Введите название выходного файла:\n> ";
+    std::cin >> outputFileName;
+
+    Sorter sort;
+    sort.sort(inputFileName, outputFileName, 2, configDelay, std::cout);
 
     return 0;
 }
