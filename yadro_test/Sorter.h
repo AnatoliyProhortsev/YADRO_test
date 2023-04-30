@@ -2,6 +2,7 @@
 #define SORTER
 
 #include <vector>
+#include <algorithm>
 
 #include "Tape.h"
 
