@@ -26,6 +26,8 @@ struct Delay
 	unsigned readWrite;
 };
 
+static inline unsigned		 tapesCount{ 0 };
+
 class Tape
 {
 public:
@@ -33,26 +35,27 @@ public:
 			Tape(Delay delays);
 			~Tape();
 	void	writeToFile();
+	void	writeToFile(std::string fileName);
 	void	readFromFile();
-	void	readFromFile(unsigned long size);
+	bool	openFile();
 	void	sort();
 	void	move(Direction direction);
 	void	roll(Destination destination);
 	void	roll(int step);
 	void	pushBack(__int32 element);
-	void	pushFront(__int32 element);
 	void	write(__int32 data);
+	void	clearTape();
 	__int32 read() const;
-	__int32	getMinElement();
-	size_t	getElementCount();
+	__int32 readRaw();
 	bool	isAtEnd() const;
+	bool	isEof() const;
 
 private:
 	Delay						 delay_;
 	std::list<__int32>			 data_;
 	std::list<__int32>::iterator head_;
-	std::string					 fileName_;
-	static inline unsigned		 tapeNo_{ 0 }; //Починить, хуйню выдаёт
+	std::ifstream				 file_;
+	unsigned					 tapeNo_;
 };
 
 #endif // !TAPE

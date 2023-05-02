@@ -2,57 +2,78 @@
 
 void Sorter::sort(const std::string& inputFileName,
 			   const std::string& outputFileName,
-			   long long N, const Delay& tapeDelay,
+			   unsigned long long N, const Delay& tapeDelay,
 			   std::ostream& debugStream)
 {
 	std::ifstream inputFile(inputFileName);
 	if (!inputFile.is_open())
 	{
-		debugStream << "-- Не удалось открыть входной файл.\n";
+		debugStream << "--- Не удалось открыть входной файл.\n";
 		return;
 	}
 
 	std::ofstream outputFile(outputFileName);
 	if (!outputFile.is_open())
 	{
-		debugStream << "-- Не удалось создать выходной файл.\n";
+		debugStream << "--- Не удалось создать выходной файл.\n";
 		return;
 	}
+	
+	/*
+	* В блоке ниже используется только одна лента, которая создаёт нужное кол-во временных файлов
+	* В память загружается не больше N элементов;
+	*/
 
-	//Посмотреть про асинхронную работу с файлами -> done
-	//Если можно будет прикрутить, сделать чтение с файла с std::async()
-	// ^ а мне кажется, что можно.
+	debugStream << "--- Разбиение исходного файла на файлы временных лент\n";
 
-	std::list<Tape>			  tmpTapes; //list потому что при реаллокации съезжает итератор
-	std::list<Tape>::iterator tapesIter;
+	Tape tmpTape(tapeDelay);
+	unsigned tapeNo = 1;
+
 	__int32				dataLine;
 	while (!inputFile.eof())
 	{
-		tmpTapes.emplace_back(tapeDelay);
+		
 		for (int i = 0; i < N; i++)
 		{
 			if (inputFile.eof())
 				break;
 
 			inputFile >> dataLine;
-			tmpTapes.back().pushBack(dataLine);
+			tmpTape.pushBack(dataLine);
 		}
 
-		tmpTapes.back().sort();
+		tmpTape.sort();
+		tmpTape.writeToFile("tmp/" + std::to_string(tapeNo) + ".txt");
+		tmpTape.clearTape();
+		tapeNo++;
 	}
 	inputFile.close();
 	
+	/*
+	* Ниже реализован алгоритм, позволяющий не загружать в память все данные
+	* с лент, а только считывать по 1 элементу с файла
+	* Этот алгоритм не раскрывает ленту "по-настоящему",
+	* Имеет место сказать "костыль"
+	* (По файлу нельзя перемещаться назад, только вперёд чтением)
+	*/
+
+	std::list<Tape>			  tmpTapes(--tapeNo); //list потому что при реаллокации съезжает итератор
+	std::list<Tape>::iterator tapesIter;
+
 	std::vector<__int32>			column;
 	std::vector<__int32>::iterator	minElement;
 
 	unsigned	index = 0;
 
-	for (auto iter: tmpTapes)
+	debugStream << "--- Формирование первой колонны\n";
+
+	for (auto &iter: tmpTapes)
 	{
-		iter.roll(Destination::begin);
-		column.push_back(iter.read());
-		iter.move(Direction::forward);
+		iter.openFile();
+		column.push_back(iter.readRaw());
 	}
+
+	debugStream << "--- Вход в основной цикл сортировки\n";
 
 	while (!tmpTapes.empty())
 	{
@@ -68,9 +89,8 @@ void Sorter::sort(const std::string& inputFileName,
 
 			tapesIter = tmpTapes.begin();
 			std::advance(tapesIter, index);
-			(*tapesIter).move(Direction::forward);
-			if (!(*tapesIter).isAtEnd())
-				*minElement = (*tapesIter).read();
+			if (!(*tapesIter).isEof())
+				*minElement = (*tapesIter).readRaw();
 			else
 			{
 				if (tmpTapes.size() == 1)
@@ -95,4 +115,6 @@ void Sorter::sort(const std::string& inputFileName,
 	}
 
 	outputFile.close();
+
+	debugStream << "--- Сортировка завершена\n";
 }

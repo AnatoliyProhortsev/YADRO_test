@@ -3,25 +3,49 @@
 Tape::Tape()
 {
 	delay_ = { 0,0,0 };
-	tapeNo_++;
+	tapeNo_ = tapesCount++;
 }
 
 Tape::Tape(Delay delays)
 {
 	delay_ = delays;
-	tapeNo_++;
+	tapeNo_ = tapesCount++;
 }
 
 Tape::~Tape()
 {
 	data_.clear();
 	head_ = data_.end();
-	tapeNo_--;
+	file_.close();
+	tapesCount--;
 }
 
 void Tape::writeToFile()
 {
-	std::ofstream file(std::to_string(tapeNo_) + ".txt");
+	std::ofstream file("tmp/" + std::to_string(tapeNo_) + ".txt");
+
+	if (file.is_open())
+	{
+		unsigned i = 1;
+		roll(Destination::begin);
+		while (!isAtEnd())
+		{
+			file << read();
+			if (i != data_.size())
+				file << '\n';
+
+			move(Direction::forward);
+			i++;
+		}
+
+		file.close();
+	}
+	roll(Destination::begin);
+}
+
+void Tape::writeToFile(std::string fileName)
+{
+	std::ofstream file(fileName);
 
 	if (file.is_open())
 	{
@@ -44,7 +68,7 @@ void Tape::writeToFile()
 
 void Tape::readFromFile()
 {
-	std::ifstream file(std::to_string(tapeNo_) + ".txt");
+	std::ifstream file("tmp/" + std::to_string(tapeNo_) + ".txt");
 
 	if (file.is_open())
 	{
@@ -59,26 +83,10 @@ void Tape::readFromFile()
 	}
 }
 
-void Tape::readFromFile(unsigned long size)
+bool Tape::openFile()
 {
-	if (size == 0)
-		return;
-
-	std::ifstream file(std::to_string(tapeNo_) + ".txt");
-
-	if (file.is_open())
-	{
-		unsigned long count = 0;
-		__int32 line;
-		while (!file.eof() || count != size)
-		{
-			file >> line;
-			pushBack(line);
-			count++;
-		}
-
-		file.close();
-	}
+	file_.open("tmp/" + std::to_string(tapeNo_) + ".txt");
+	return file_.is_open();
 }
 
 void Tape::sort()
@@ -131,8 +139,6 @@ void Tape::sort()
 	}
 
 	roll(Destination::begin);
-
-	writeToFile();
 }
 
 void Tape::move(Direction direction)
@@ -170,14 +176,6 @@ void Tape::pushBack(__int32 element)
 	std::advance(head_, -1);
 }
 
-void Tape::pushFront(__int32 element)
-{
-	Sleep(delay_.roll);
-	Sleep(delay_.readWrite);
-	data_.push_front(element);
-	head_ = data_.begin();
-}
-
 __int32 Tape::read() const
 {
 	if (!data_.empty() && head_ != data_.end())
@@ -185,6 +183,13 @@ __int32 Tape::read() const
 		Sleep(delay_.readWrite);
 		return *head_;
 	}
+}
+
+__int32 Tape::readRaw()
+{
+	__int32 tmp;
+	file_ >> tmp;
+	return tmp;
 }
 
 void Tape::write(__int32 data)
@@ -196,34 +201,18 @@ void Tape::write(__int32 data)
 	}
 }
 
-__int32 Tape::getMinElement()
+void Tape::clearTape()
 {
-	__int32 min = read();
-
-	if (data_.size() == 1)
-		return min;
-
-	roll(Destination::begin);
-	__int32 tmp;
-	while (!isAtEnd())
-	{
-		tmp = read();
-		if (tmp < min)
-			min = tmp;
-		move(Direction::forward);
-	}
-
-	roll(Destination::begin);
-
-	return min;
-}
-
-size_t Tape::getElementCount()
-{
-	return data_.size();
+	data_.clear();
+	file_.close();
 }
 
 bool Tape::isAtEnd() const
 {
 	return head_ == data_.end();
+}
+
+bool Tape::isEof() const
+{
+	return file_.eof();
 }
